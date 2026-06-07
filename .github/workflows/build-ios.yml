@@ -27,41 +27,15 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      # Очищает проект и устанавливает зависимости.
+      # Очищает проект.
       - name: Install dependencies
         run: |
           flutter clean
           flutter pub get
 
-      # Создаёт exportOptions.plist, если его нет в ios/.
-      # APPLE_TEAM_ID можно задать в GitHub Secrets.
-      - name: Create exportOptions.plist if missing
-        shell: bash
-        run: |
-          if [ ! -f "ios/exportOptions.plist" ]; then
-            cat > ios/exportOptions.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>development</string>
-            <key>teamID</key>
-            <string>${{ secrets.APPLE_TEAM_ID }}</string>
-            <key>compileBitcode</key>
-            <false/>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
-          fi
-
       # Собирает IPA в release-режиме.
       - name: Build IPA
-        run: flutter build ipa --release --export-options-plist ios/exportOptions.plist
+        run: flutter build ipa --release --export-method development
 
       # Сохраняет IPA как артефакт GitHub Actions.
       - name: Upload IPA artifact
