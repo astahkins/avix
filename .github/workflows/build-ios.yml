@@ -27,6 +27,13 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      # Создаёт iOS-платформу, если папка ios/ ещё не добавлена в репозиторий.
+      - name: Create iOS platform if missing
+        run: |
+          if [ ! -d "ios" ]; then
+            flutter create --platforms=ios .
+          fi
+
       # Очищает проект.
       - name: Install dependencies
         run: |
