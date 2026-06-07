@@ -1,8 +1,6 @@
-import 'dart:math';
-import 'dart:typed_data';
+import 'dart:convert';
 
-import 'package:blake2b/blake2b.dart';
-import 'package:ed25519/ed25519.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/user.dart';
@@ -36,14 +34,15 @@ class AuthService {
   Future<User> register(
     String email,
     String code,
-    String nickname, [
-    String? publicKey,
-  ]) async {
-    final privateKey = _generatePrivateKey();
-    final generatedPublicKey = Ed25519.publickey(_blake2bHashFunc, privateKey);
+    String nickname,
+  ) async {
+    final algorithm = Ed25519();
+    final keyPair = await algorithm.newKeyPair();
+    final publicKey = await keyPair.extractPublicKey();
+    final privateKeyBytes = await keyPair.extractPrivateKeyBytes();
 
-    final privateKeyHex = _bytesToHex(privateKey);
-    final publicKeyHex = publicKey ?? _bytesToHex(generatedPublicKey);
+    final privateKeyBase64 = base64Encode(privateKeyBytes);
+    final publicKeyBase64 = base64Encode(publicKey.bytes);
 
     final response = await _apiClient.post(
       '/auth/register/verify',
@@ -51,7 +50,7 @@ class AuthService {
         'email': email,
         'code': code,
         'nickname': nickname,
-        'publicKey': publicKeyHex,
+        'publicKey': publicKeyBase64,
       },
     );
 
@@ -60,8 +59,8 @@ class AuthService {
       throw const ApiException('Invalid auth response');
     }
 
-    await _storageService.savePrivateKey(privateKeyHex);
-    await _storageService.savePublicKey(publicKeyHex);
+    await _storageService.savePrivateKey(privateKeyBase64);
+    await _storageService.savePublicKey(publicKeyBase64);
     await _storageService.saveNickname(nickname);
     await _secureStorage.write(
       key: _authTokenStorageKey,
@@ -70,7 +69,7 @@ class AuthService {
 
     return User(
       nickname: nickname,
-      publicKey: publicKeyHex,
+      publicKey: publicKeyBase64,
     );
   }
 
@@ -92,35 +91,6 @@ class AuthService {
     }
 
     return UserInfo.fromJson(response);
-  }
-
-  Uint8List _generatePrivateKey() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
-
-    return Uint8List.fromList(bytes);
-  }
-
-  Uint8List _blake2bHashFunc(Uint8List message) {
-    final bytes = Uint8List(64);
-    final hash = Blake2b(512);
-
-    hash.update(message, 0, message.length);
-    hash.digest(bytes, 0);
-
-    return bytes;
-  }
-
-  String _bytesToHex(Uint8List bytes) {
-    const hexChars = '0123456789abcdef';
-    final buffer = StringBuffer();
-
-    for (final byte in bytes) {
-      buffer.write(hexChars[(byte >> 4) & 0x0f]);
-      buffer.write(hexChars[byte & 0x0f]);
-    }
-
-    return buffer.toString();
   }
 }
 

@@ -12,7 +12,6 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5
   http: ^1.6.0
-  ed25519: ^0.0.1
   cryptography: ^2.7.0
   mobile_scanner: ^7.2.0
   flutter_blue_plus: ^1.32.0
